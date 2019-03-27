@@ -19,7 +19,6 @@
 
 (require 'ert)
 
-(add-to-list 'load-path ".")            ;FIXME: Really?
 (require 'webfeeder)
 (require 'diff)
 (require 'cl-lib)
@@ -55,7 +54,7 @@
         (delete-file file-a)
         (delete-file file-b)))))
 
-;; FIXME: Add this to ERT!
+;; FIXME: Add this to ERT! (Mail sent to Emacs debbug.)
 (put 'string= 'ert-explainer #'webfeeder--string=-explainer)
 
 (defun webfeeder--test-pages (feed html-files
