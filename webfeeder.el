@@ -5,7 +5,7 @@
 ;; Author: Pierre Neidhardt <mail@ambrevar.xyz>
 ;; Maintainer: Pierre Neidhardt <mail@ambrevar.xyz>
 ;; URL: https://gitlab.com/Ambrevar/emacs-webfeeder
-;; Version: 1.0.0
+;; Version: 1.1.0
 ;; Package-Requires: ((emacs "25.1"))
 ;; Keywords: news, hypermedia, blog, feed, rss, atom
 
@@ -325,8 +325,12 @@ The date is set to epoch if the item date is nil."
 (defun webfeeder--extract-name+email (address)
   "Like `mail-extract-address-components' but does not set the
 address part if email is missing.
-For instance, calling this function on \"foo\" returns (\"foo\" nil)."
+For instance, calling this function on \"foo\" returns (\"foo\" nil).
+Calling it on foo@bar.abc returns (nil \"foo@bar.abc\")."
   (let ((name+addr (mail-extract-address-components address)))
+    (unless (string-match "@" (cadr name+addr))
+      (setcar name+addr (cadr name+addr))
+      (setcdr name+addr nil))
     (when (string= (car name+addr)
                    (cadr name+addr))
       (setcdr name+addr nil))
@@ -335,11 +339,15 @@ For instance, calling this function on \"foo\" returns (\"foo\" nil)."
 (defun webfeeder--format-atom-author (author)
   (concat "<author>"
           (let ((name+addr (webfeeder--extract-name+email author)))
-            (if (cadr name+addr)
-                (format "<name>%s</name><email>%s</email>"
-                        (xml-escape-string (car name+addr))
-                        (cadr name+addr))
-              (format "<name>%s</name>" (xml-escape-string author))))
+            (cond
+             ((and (car name+addr) (cadr name+addr))
+              (format "<name>%s</name><email>%s</email>"
+                      (xml-escape-string (car name+addr))
+                      (cadr name+addr)))
+             ((car name+addr)
+              (format "<name>%s</name>" (xml-escape-string author)))
+             (t
+              (format "<email>%s</email>" (xml-escape-string author)))))
           "</author>\n"))
 
 (defun webfeeder-item-to-atom (item)
@@ -381,6 +389,12 @@ The date is set to epoch if the item date is nil."
   categories
   generator)
 
+(defun webfeeder--xml-escape-string (string)
+  "Like `xml-escape-string' but return nil on nil."
+  (if string
+      (xml-escape-string string)
+    nil))
+
 ;;;###autoload
 (defun webfeeder-html-files-to-items (project-dir url html-files)
   "Parse the source HTML-FILES and return a list of webfeeder-items.
@@ -398,12 +412,12 @@ variables:
   (cl-loop for html-file in html-files
            for dest = (expand-file-name html-file project-dir)
            for feed-url = (concat (replace-regexp-in-string "/*$" "" url) "/" html-file)
-           for feed-author = (funcall webfeeder-author-function dest)
+           for feed-author = (webfeeder--xml-escape-string (funcall webfeeder-author-function dest))
            for feed-date = (or (funcall webfeeder-date-function
                                         (expand-file-name html-file project-dir))
                                0)
-           for feed-title = (or (funcall webfeeder-title-function dest) feed-url)
-           for feed-subtitle = (funcall webfeeder-subtitle-function dest)
+           for feed-title = (or (webfeeder--xml-escape-string (funcall webfeeder-title-function dest)) feed-url)
+           for feed-subtitle = (webfeeder--xml-escape-string (funcall webfeeder-subtitle-function dest))
            for feed-body = (funcall webfeeder-body-function dest feed-url 'exclude-toc)
            for feed-categories = (funcall webfeeder-categories-function dest)
            for feed-generator = (funcall webfeeder-generator-function dest)
