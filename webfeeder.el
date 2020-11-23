@@ -5,7 +5,7 @@
 ;; Author: Pierre Neidhardt <mail@ambrevar.xyz>
 ;; Maintainer: Pierre Neidhardt <mail@ambrevar.xyz>
 ;; URL: https://gitlab.com/Ambrevar/emacs-webfeeder
-;; Version: 1.1.0
+;; Version: 1.1.1
 ;; Package-Requires: ((emacs "25.1"))
 ;; Keywords: news, hypermedia, blog, feed, rss, atom
 
@@ -412,12 +412,14 @@ variables:
   (cl-loop for html-file in html-files
            for dest = (expand-file-name html-file project-dir)
            for feed-url = (concat (replace-regexp-in-string "/*$" "" url) "/" html-file)
-           for feed-author = (webfeeder--xml-escape-string (funcall webfeeder-author-function dest))
+           ;; TODO: Shall we escape author, title and subtitle?  HTML files
+           ;; should already be escaped, so there should be no need.
+           for feed-author = (funcall webfeeder-author-function dest)
            for feed-date = (or (funcall webfeeder-date-function
                                         (expand-file-name html-file project-dir))
                                0)
-           for feed-title = (or (webfeeder--xml-escape-string (funcall webfeeder-title-function dest)) feed-url)
-           for feed-subtitle = (webfeeder--xml-escape-string (funcall webfeeder-subtitle-function dest))
+           for feed-title = (or (funcall webfeeder-title-function dest) feed-url)
+           for feed-subtitle = (funcall webfeeder-subtitle-function dest)
            for feed-body = (funcall webfeeder-body-function dest feed-url 'exclude-toc)
            for feed-categories = (funcall webfeeder-categories-function dest)
            for feed-generator = (funcall webfeeder-generator-function dest)
